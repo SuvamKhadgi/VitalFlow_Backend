@@ -4,25 +4,49 @@ const fs = require("fs");
 const path = require('path');
 const SECRET_KEY = "e48c461823ec94fd9b9f49996e0edb7bfa85ee66a8e86a3de9ce12cf0e657ac1";
 const Creadential = require('../model/Creads');
+const nodemailer = require("nodemailer")
 
-
-
-// Signup API with Profile Picture Support
 const signUp = async (req, res) => {
     try {
         const { full_name, email, password, profile_picture, role } = req.body;
+
         if (!full_name || !email || !password) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        // const profilePicture = req.file.path ; 
-        console.log("Uploaded File:", profile_picture); // Debugging log
-
         const cred = new Creadential({ full_name, email, password: hashedPassword, profile_picture, role });
         await cred.save();
-        res.status(201).json(cred);
+
+        // Setup Nodemailer Transport
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "vitalflow33@gmail.com",
+                pass: "zogh jnnd cmux ohjt" // Replace with App Password
+            }
+        });
+
+        // Email Content
+        const mailOptions = {
+            from: '"VitalFlow MedLink" <vitalflow33@gmail.com>',
+            to: cred.email,
+            subject: "Account Created Successfully",
+            html: `
+                <h1>Welcome to VitalFlow</h1>
+                <p>Your account has been created successfully.</p>
+                <p><strong>User ID:</strong> ${cred._id}</p>
+            `
+        };
+
+        // Send Email
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Email sent:", info.response);
+
+        res.status(201).json({ message: "User created successfully", cred, emailInfo: info });
+
     } catch (error) {
+        console.error("Error:", error);
         res.status(500).json({ message: "Error signing up", error });
     }
 };
@@ -48,7 +72,7 @@ const login = async (req, res) => {
         }
 
         const token = jwt.sign(
-            { userId: user._id, email: user.email, role: user.role, name:user.full_name },
+            { userId: user._id, email: user.email, role: user.role, name: user.full_name },
             SECRET_KEY,
             { expiresIn: "10h" }
         );
