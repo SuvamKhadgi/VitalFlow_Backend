@@ -1,6 +1,8 @@
 const Order = require("../model/order");
 const Cart = require("../model/cart"); // Assuming you have a Cart model
+const User = require("../model/Creads"); // Import User model
 
+const nodemailer = require("nodemailer")
 
 const findAll = async (req, res) => {
     try {
@@ -26,6 +28,10 @@ const saveOrder = async (req, res) => {
         if (!userId || !address || !phone_no) {
             return res.status(400).json({ error: "All fields are required" });
         }
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
 
         const order = new Order({
             userId,
@@ -35,6 +41,30 @@ const saveOrder = async (req, res) => {
         });
 
         await order.save();
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "vitalflow33@gmail.com",
+                pass: "zogh jnnd cmux ohjt" // Replace with App Password
+            }
+        });
+
+        // Email Content
+        const mailOptions = {
+            from: '"VitalFlow MedLink" <vitalflow33@gmail.com>',
+            to: user.email,
+            subject: "YOUR ORDER IS Created Successfully",
+            html: `
+                        <h1>WE HAVE GOT YOUR ORDER </h1>
+                        <p>WE WILL CALL YOU WHEN AND DELIVER TO YOU LOCATION.</p>
+                        
+                    `
+        };
+
+        // Send Email
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Email sent:", info.response);
+
         res.status(201).json(order);
     } catch (error) {
         console.error("Error saving order:", error);
