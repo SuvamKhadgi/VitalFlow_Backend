@@ -104,6 +104,27 @@ const deleteById = async (req, res) => {
     }
 }
 
+const deleteItemFromCart = async (req, res) => {
+    try {
+        const { cartId, itemId } = req.params;
+
+        const cart = await Cart.findByIdAndUpdate(
+            cartId,
+            { $pull: { items: { itemId: itemId } } }, // Removes the item from items array
+            { new: true } // Returns the updated cart
+        );
+
+        if (!cart) {
+            return res.status(404).json({ message: "Cart not found" });
+        }
+
+        res.status(200).json({ message: "Item removed from cart", cart });
+    } catch (error) {
+        res.status(500).json({ message: "Error removing item", error });
+    }
+};
+
+
 const updateById = async (req, res) => {
     try {
         const cart = await Cart.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -133,6 +154,7 @@ module.exports = {
     findByUserId,
     deleteById,
     updateById,
-    getCartById
+    getCartById,
+    deleteItemFromCart
 
 }
